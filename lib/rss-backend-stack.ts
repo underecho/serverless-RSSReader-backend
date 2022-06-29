@@ -55,15 +55,12 @@ export class RssBackendStack extends Stack {
     rssArticleTable.grantReadWriteData(updateArticleLambdaFunc)
 
     // Attach invoke role
-    getFeedLambdaFunc.addToRolePolicy(new iam.PolicyStatement({
-      resources: [updateArticleLambdaFunc.functionArn],
-      actions: ['lambda:InvokeFunction']
-    }));
+    updateArticleLambdaFunc.grantInvoke(getFeedLambdaFunc)
     
-     //Run every 5 minutes
+    //Run every 5 minutes
     // See https://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
-    const rule = new events.Rule(this, 'Rule', {
-      schedule: events.Schedule.expression('rate(5 minute)')
+    const rule = new events.Rule(this, 'cronFeedRule', {
+      schedule: events.Schedule.expression('rate(5 minutes)')
     });
 
     // attach Lambda Function to event rule 
