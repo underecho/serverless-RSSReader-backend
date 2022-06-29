@@ -9,3 +9,6 @@ cdk.out
 
 # dotenv file
 .env
+
+# python virtual env 
+venv/
