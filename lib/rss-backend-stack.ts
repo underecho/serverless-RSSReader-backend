@@ -8,6 +8,8 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
+import { ArnPrincipal, Effect } from 'aws-cdk-lib/aws-iam';
+import { InitPackage } from 'aws-cdk-lib/aws-ec2';
 
 export class RssBackendStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -35,16 +37,6 @@ export class RssBackendStack extends Stack {
     const rssArticleTableName = rssArticleTable.tableName;
 
     // Check feed Lambda Function
-    const getFeedLambdaFunc = new PythonFunction(this, 'getFeedFunc', {
-      entry: './src/getFeed/',
-      timeout: cdk.Duration.seconds(180),
-      runtime: Runtime.PYTHON_3_7,
-      index: 'lambda_getFeed.py',
-      environment: {'RSSSOURCE_TABLENAME': rssSourceTableName}
-    });
-    
-    rssSourceTable.grantReadData(getFeedLambdaFunc)
-
     const updateArticleLambdaFunc = new PythonFunction(this, 'updateArticleFunc', {
       entry: './src/updateArticle/',
       timeout: cdk.Duration.seconds(180),
@@ -52,9 +44,24 @@ export class RssBackendStack extends Stack {
       index: 'lambda_updateArticle.py',
       environment: {'RSSARTICLE_TABLENAME':rssArticleTableName}
     });
-    rssArticleTable.grantReadWriteData(updateArticleLambdaFunc)
+    rssArticleTable.grantReadWriteData(updateArticleLambdaFunc);
 
+    const getFeedLambdaFunc = new PythonFunction(this, 'getFeedFunc', {
+      entry: './src/getFeed/',
+      timeout: cdk.Duration.seconds(180),
+      runtime: Runtime.PYTHON_3_7,
+      index: 'lambda_getFeed.py',
+      environment: {'RSSSOURCE_TABLENAME': rssSourceTableName,
+                    'UPDATEFUNC_NAME': updateArticleLambdaFunc.functionName
+    }
+    });
+    
+    rssSourceTable.grantReadData(getFeedLambdaFunc);
+
+  
     // Attach invoke role
+  
+
     updateArticleLambdaFunc.grantInvoke(getFeedLambdaFunc)
     
     //Run every 5 minutes
