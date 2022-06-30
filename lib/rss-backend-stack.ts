@@ -1,6 +1,9 @@
 import { Stack, StackProps } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
 
+import * as apigw from '@aws-cdk/aws-apigatewayv2-alpha';
+import { HttpUrlIntegration, HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
+
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
 import * as targets from 'aws-cdk-lib/aws-events-targets';
@@ -8,13 +11,13 @@ import * as cdk from 'aws-cdk-lib';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import { Runtime } from 'aws-cdk-lib/aws-lambda';
 import { PythonFunction } from '@aws-cdk/aws-lambda-python-alpha';
-import { ArnPrincipal, Effect } from 'aws-cdk-lib/aws-iam';
-import { InitPackage } from 'aws-cdk-lib/aws-ec2';
+
 
 export class RssBackendStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
+    // Dynamodb
     const rssSourceTable = new dynamodb.Table(this, 'Subscription', {
       partitionKey: { name: 'userId', type: dynamodb.AttributeType.STRING },
     });
@@ -36,6 +39,7 @@ export class RssBackendStack extends Stack {
     const rssSourceTableName = rssSourceTable.tableName;
     const rssArticleTableName = rssArticleTable.tableName;
 
+    // Lambda
     // Check feed Lambda Function
     const updateArticleLambdaFunc = new PythonFunction(this, 'updateArticleFunc', {
       entry: './src/updateArticle/',
@@ -58,13 +62,19 @@ export class RssBackendStack extends Stack {
     
     rssSourceTable.grantReadData(getFeedLambdaFunc);
 
+    const helloLambdaFunc = new PythonFunction(this, 'helloFunc', {
+      entry: './src/API/',
+      timeout: cdk.Duration.seconds(180),
+      runtime: Runtime.PYTHON_3_7,
+      index: 'lambda_hello.py',
+      environment: {}
+    });
+
   
     // Attach invoke role
-  
-
     updateArticleLambdaFunc.grantInvoke(getFeedLambdaFunc)
     
-    //Run every 5 minutes
+    // Run every 5 minutes
     // See https://docs.aws.amazon.com/lambda/latest/dg/tutorial-scheduled-events-schedule-expressions.html
     const rule = new events.Rule(this, 'cronFeedRule', {
       schedule: events.Schedule.expression('rate(5 minutes)')
@@ -72,6 +82,23 @@ export class RssBackendStack extends Stack {
 
     // attach Lambda Function to event rule 
     rule.addTarget(new targets.LambdaFunction(getFeedLambdaFunc));
+
+    // API Gateway
+    const getArticleIntegration = new HttpLambdaIntegration('GetArticleIntegration', helloLambdaFunc);
+    const getArticleDefaultIntegration = new HttpLambdaIntegration('GetArticleIntegration', helloLambdaFunc);
+
+    const httpApi = new apigw.HttpApi(this, 'HttpApi');
+
+    httpApi.addRoutes({
+      path: '/books',
+      methods: [ apigw.HttpMethod.GET ],
+      integration: getArticleIntegration,
+    });
+    httpApi.addRoutes({
+      path: '/books',
+      methods: [ apigw.HttpMethod.ANY ],
+      integration: getArticleDefaultIntegration,
+    });
 
   }
 }
