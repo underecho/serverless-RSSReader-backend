@@ -3,6 +3,7 @@ import { Construct } from 'constructs';
 
 import * as apigw from '@aws-cdk/aws-apigatewayv2-alpha';
 import { HttpUrlIntegration, HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
+import * as authorizers from '@aws-cdk/aws-apigatewayv2-authorizers-alpha'
 
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as events from 'aws-cdk-lib/aws-events';
@@ -70,6 +71,15 @@ export class RssBackendStack extends Stack {
       environment: {}
     });
 
+    const apiGetArticleLambdaFunc = new PythonFunction(this, 'api_GetArticleFunc', {
+      entry: './src/API/',
+      timeout: cdk.Duration.seconds(180),
+      runtime: Runtime.PYTHON_3_7,
+      index: 'lambda_getArticle.py',
+      environment: {"ARTICLE_TABLENAME": rssArticleTableName}
+    });
+    rssArticleTable.grantReadData(apiGetArticleLambdaFunc);
+
   
     // Attach invoke role
     updateArticleLambdaFunc.grantInvoke(getFeedLambdaFunc)
@@ -84,18 +94,18 @@ export class RssBackendStack extends Stack {
     rule.addTarget(new targets.LambdaFunction(getFeedLambdaFunc));
 
     // API Gateway
-    const getArticleIntegration = new HttpLambdaIntegration('GetArticleIntegration', helloLambdaFunc);
+    const getArticleIntegration = new HttpLambdaIntegration('GetArticleIntegration', apiGetArticleLambdaFunc);
     const getArticleDefaultIntegration = new HttpLambdaIntegration('GetArticleIntegration', helloLambdaFunc);
 
     const httpApi = new apigw.HttpApi(this, 'HttpApi');
 
     httpApi.addRoutes({
-      path: '/books',
+      path: '/article',
       methods: [ apigw.HttpMethod.GET ],
       integration: getArticleIntegration,
     });
     httpApi.addRoutes({
-      path: '/books',
+      path: '/article',
       methods: [ apigw.HttpMethod.ANY ],
       integration: getArticleDefaultIntegration,
     });

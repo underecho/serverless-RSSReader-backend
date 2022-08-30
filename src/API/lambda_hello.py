@@ -1,2 +1,4 @@
+import boto3
+
 def handler(event, ctx):
-    return {"message": "hello, world!"}
+    return {"message": "hello"}
