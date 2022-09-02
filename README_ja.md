@@ -1,8 +1,7 @@
-# Welcome to your CDK TypeScript project
+# Serverless RSS for AWS
+このプロジェクトはAWS上でRSSのサーバー部分とAPIを提供します。
 
-This is a blank project for CDK development with TypeScript.
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
+デプロイはAWS CDKによって行われ、できる限りコンソールを直接触れないことを目標に設計されています。
 
 ## Useful commands
 
@@ -12,3 +11,10 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 * `cdk deploy`      deploy this stack to your default AWS account/region
 * `cdk diff`        compare deployed stack with current state
 * `cdk synth`       emits the synthesized CloudFormation template
+
+## for development
+
+- 環境
+    - node.js == v16.14.1
+    - python == 3.7
+    - AWS CDK == 2.28.1

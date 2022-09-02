@@ -97,7 +97,7 @@ export class RssBackendStack extends Stack {
     const getArticleIntegration = new HttpLambdaIntegration('GetArticleIntegration', apiGetArticleLambdaFunc);
     const getArticleDefaultIntegration = new HttpLambdaIntegration('GetArticleIntegration', helloLambdaFunc);
 
-    const httpApi = new apigw.HttpApi(this, 'HttpApi');
+    const httpApi = new apigw.HttpApi(this, 'RSSBackendHttpApi');
 
     httpApi.addRoutes({
       path: '/article',
